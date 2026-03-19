@@ -22,6 +22,47 @@ resource "aws_db_subnet_group" "main" {
   subnet_ids = var.private_subnet_ids
 }
 
+resource "aws_db_parameter_group" "mysql_params" {
+  name   = "mysql-test-params"
+  family = "mysql8.0"
+
+  parameter {
+    name  = "slow_query_log"
+    value = "1"
+  }
+
+  parameter {
+    name  = "long_query_time"
+    value = "2"
+  }
+
+  tags = {
+    Name = "mysql-params"
+  }
+}
+
+resource "aws_iam_role" "rds_monitoring_role" {
+  name = "rds-monitoring-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "monitoring.rds.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "rds_monitoring_policy" {
+  role       = aws_iam_role.rds_monitoring_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+}
+
 resource "aws_db_instance" "rds" {
   allocated_storage      = 10
   engine                 = "mysql"
@@ -32,4 +73,14 @@ resource "aws_db_instance" "rds" {
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
 
   skip_final_snapshot = true
+  parameter_group_name = aws_db_parameter_group.mysql_params.name
+
+  monitoring_role_arn = aws_iam_role.rds_monitoring_role.arn
+  monitoring_interval = 60
+
+  publicly_accessible = false
+
+  tags = {
+    Name = "test-rds"
+  }
 }
