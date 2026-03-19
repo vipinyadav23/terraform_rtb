@@ -41,7 +41,7 @@ resource "aws_db_parameter_group" "mysql_params" {
   }
 }
 
-resource "aws_iam_role" "rds_monitoring_role" {
+resource "aws_iam_role" "rds_rtb_monitoring_role" {
   name = "rds-monitoring-role"
 
   assume_role_policy = jsonencode({
